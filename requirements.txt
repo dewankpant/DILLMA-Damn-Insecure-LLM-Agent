@@ -1,0 +1,19 @@
+# Web framework
+flask
+
+# Langchain for LLM application framework
+langchain
+langchain-community
+langchain-core
+
+# LlamaCpp for running Llama models
+llama-cpp-python
+
+# Sentence Transformers for embeddings (HuggingFace)
+sentence-transformers
+
+# PyMuPDF (fitz) for PDF document loading
+pymupdf
+
+# ReportLab for generating fake PDF documents
+reportlab
