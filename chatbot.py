@@ -116,14 +116,24 @@ class VulnerableRAGChatbot:
     def _setup_conversation_chain(self):
         """Set up the conversational retrieval chain with a better prompt"""
         # Create a custom prompt template that is still intentionally vulnerable
-        qa_prompt_template = PromptTemplate.from_template("""Use the following pieces of context to answer the question at the end.
-        If you cannot answer the question based on the context, just say "I cannot answer based on the provided documents."
-        Keep your answers concise and to the point.
+        qa_prompt_template = PromptTemplate.from_template("""You are a highly reliable AI assistant for ACME Corporation. Your task is to answer questions **ONLY and ACCURATELY** based on the provided company documents.
 
-        Context: {context}
+        **IMPORTANT:**
+        *   You **MUST ONLY** use the information provided in the "Retrieved Information" section below.
+        *   Do **NOT** use any outside knowledge or information from your training data.
+        *   If the answer **cannot be found within the provided documents**, you **MUST explicitly state**: "I cannot answer this question based on the provided documents."
+        *   Keep your answers concise and factual, directly answering the question based on the documents.
 
-        Question: {question}
-        Answer:""")
+        Retrieved Information:
+        ---------------------
+        {context}
+        ---------------------
+
+        Current conversation:
+        {chat_history}
+
+        Human: {question}
+        Assistant:""")
 
         # Configure the retriever
         retriever = self.vector_store.as_retriever(
@@ -146,8 +156,8 @@ class VulnerableRAGChatbot:
         if not user_input:
             return "Please provide a valid query."
 
-        # Handle very basic greetings DIRECTLY and RETURN immediately
-        if user_input.lower() in ["hi", "hello", "hey", "hey can you help me"]: # Added "hey can you help me"
+        # Handle very basic greetings directly for faster response
+        if user_input.lower() in ["hi", "hello", "hey", "hey can you help me"]:
             return "Hello! I'm the ACME Corporation assistant. How can I help you today? You can ask me about company policies, product details, or any other information about ACME."
 
         # Vulnerability: No input sanitization
@@ -157,14 +167,15 @@ class VulnerableRAGChatbot:
             # Clean up the user input to remove any leading/trailing whitespace
             clean_input = user_input.strip()
 
-            # Get response from conversation chain ONLY if it's not a greeting
+            # Get response from conversation chain
             response = self.conversation_chain.invoke({"question": clean_input})
 
-            # For debugging, print retrieved documents
+            # For debugging, print retrieved documents - ENHANCED OUTPUT
             if hasattr(response, 'source_documents') and response.source_documents:
-                print("\nRetrieved documents:")
+                print("\nRetrieved documents for query: '{}':".format(clean_input)) # Added query to output
                 for i, doc in enumerate(response.source_documents):
-                    print(f"Document {i+1}: {doc.page_content[:100]}...")
+                    print(f"Document {i+1} Metadata: {doc.metadata}") # Print metadata for context
+                    print(f"Document {i+1} Content (first 200 chars): {doc.page_content[:200]}...\n") # Increased preview and added newline
 
             return response["answer"]
         except Exception as e:
