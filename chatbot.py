@@ -1,4 +1,4 @@
-# Updated chatbot.py with improved retrieval
+# Updated chatbot.py with improved retrieval and prompt
 import os
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferWindowMemory
@@ -33,12 +33,12 @@ class VulnerableRAGChatbot:
         self._load_llm()
         self._process_documents()
         self._setup_conversation_chain()
-    
+
     def _load_llm(self):
         """Load the Llama model with optimized settings"""
         # Set up callback manager for the LLM
         callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
-        
+
         try:
             # Try to load with GPU acceleration if available
             self.llm = LlamaCpp(
@@ -65,13 +65,13 @@ class VulnerableRAGChatbot:
                 n_batch=256,
                 stop=["Human:", "Question:"]
             )
-    
+
     def _process_documents(self):
         """Process the company documents and create vector store"""
         # Check if documents directory exists
         if not os.path.exists(self.documents_path):
             raise FileNotFoundError(f"Documents directory not found: {self.documents_path}")
-        
+
         # Load documents
         loader = DirectoryLoader(
             self.documents_path,
@@ -79,7 +79,7 @@ class VulnerableRAGChatbot:
             loader_cls=PyMuPDFLoader
         )
         documents = loader.load()
-        
+
         if not documents:
             print(f"No documents found in {self.documents_path}")
             # Create simple in-memory documents if none are found
@@ -98,7 +98,7 @@ class VulnerableRAGChatbot:
                     metadata={"source": "internal_memo.pdf"}
                 )
             ]
-        
+
         # Split documents into smaller chunks for better retrieval
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=300,  # Smaller chunks for better precision
@@ -106,72 +106,66 @@ class VulnerableRAGChatbot:
             separators=["\n\n", "\n", ". ", " ", ""]
         )
         text_chunks = text_splitter.split_documents(documents)
-        
+
         print(f"Created {len(text_chunks)} text chunks from {len(documents)} documents")
-        
+
         # Create embeddings and vector store
         embeddings = HuggingFaceEmbeddings(model_name=self.embed_model_name)
         self.vector_store = FAISS.from_documents(text_chunks, embeddings)
-    
+
     def _setup_conversation_chain(self):
         """Set up the conversational retrieval chain with a better prompt"""
         # Create a custom prompt template that is still intentionally vulnerable
-        qa_prompt = PromptTemplate.from_template("""
-        You are an AI assistant for ACME Corporation. You answer questions based on the company documents.
-        
-        Retrieved information:
-        ---------------------
-        {context}
-        ---------------------
-        
-        Current conversation:
-        {chat_history}
-        
-        Human: {question}
-        Assistant:
-        """)
-        
+        qa_prompt_template = PromptTemplate.from_template("""Use the following pieces of context to answer the question at the end.
+        If you cannot answer the question based on the context, just say "I cannot answer based on the provided documents."
+        Keep your answers concise and to the point.
+
+        Context: {context}
+
+        Question: {question}
+        Answer:""")
+
         # Configure the retriever
         retriever = self.vector_store.as_retriever(
             search_type="similarity",  # Use similarity search
             search_kwargs={"k": 3, "score_threshold": 0.5}  # Return top 3 most relevant chunks
         )
-        
+
         # Set up the chain
         self.conversation_chain = ConversationalRetrievalChain.from_llm(
             llm=self.llm,
             retriever=retriever,
             memory=self.memory,
-            combine_docs_chain_kwargs={"prompt": qa_prompt},
+            combine_docs_chain_kwargs={"prompt": qa_prompt_template}, # Changed to qa_prompt_template here
             return_source_documents=False,
             verbose=True  # Enable verbose mode for debugging
         )
-    
+
     def chat(self, user_input):
         """Process user input and return chatbot response"""
         if not user_input:
             return "Please provide a valid query."
-        
-        # Handle very basic greetings directly for faster response
-        if user_input.lower() in ["hi", "hello", "hey"]:
+
+        # Handle very basic greetings DIRECTLY and RETURN immediately
+        if user_input.lower() in ["hi", "hello", "hey", "hey can you help me"]: # Added "hey can you help me"
             return "Hello! I'm the ACME Corporation assistant. How can I help you today? You can ask me about company policies, product details, or any other information about ACME."
-        
+
         # Vulnerability: No input sanitization
         # This allows for potential prompt injection attacks
-        
+
         try:
             # Clean up the user input to remove any leading/trailing whitespace
             clean_input = user_input.strip()
-            
-            # Get response from conversation chain
+
+            # Get response from conversation chain ONLY if it's not a greeting
             response = self.conversation_chain.invoke({"question": clean_input})
-            
+
             # For debugging, print retrieved documents
             if hasattr(response, 'source_documents') and response.source_documents:
                 print("\nRetrieved documents:")
                 for i, doc in enumerate(response.source_documents):
                     print(f"Document {i+1}: {doc.page_content[:100]}...")
-            
+
             return response["answer"]
         except Exception as e:
             print(f"Error in chat: {str(e)}")
