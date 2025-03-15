@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DILLMA Corporation - Submit Flags</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #e5e5e5;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #3a3a3a;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #10b981;
+        }
+        .user-info {
+            text-align: right;
+            margin-bottom: 20px;
+            color: #a3a3a3;
+        }
+        .vulnerability-list {
+            margin-bottom: 30px;
+        }
+        .vulnerability {
+            background-color: #252525;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #3a3a3a;
+            position: relative;
+        }
+        .vulnerability.solved {
+            border-color: #10b981;
+        }
+        .vulnerability-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .vulnerability-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #e5e5e5;
+        }
+        .solved-badge {
+            background-color: #10b981;
+            color: #000;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .vulnerability-description {
+            margin-bottom: 15px;
+            color: #a3a3a3;
+        }
+        .flag-form {
+            display: flex;
+            gap: 10px;
+        }
+        .flag-input {
+            flex-grow: 1;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #3a3a3a;
+            background-color: #2d2d2d;
+            color: #e5e5e5;
+        }
+        .flag-input:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+        .submit-btn {
+            padding: 10px 15px;
+            background-color: #10b981;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .submit-btn:hover {
+            background-color: #0da271;
+        }
+        .hint {
+            margin-top: 10px;
+            font-style: italic;
+            color: #a3a3a3;
+            font-size: 14px;
+        }
+        .hint-toggle {
+            background: none;
+            border: none;
+            color: #10b981;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0;
+            text-decoration: underline;
+        }
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+        .flash {
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .flash.success {
+            background-color: rgba(16, 185, 129, 0.2);
+            border: 1px solid #10b981;
+            color: #10b981;
+        }
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #3a3a3a;
+        }
+        .nav-link {
+            color: #10b981;
+            text-decoration: none;
+        }
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+        .checkmark {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #10b981;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="user-info">
+        Logged in as: <strong>{{ username }}</strong> | 
+        <a href="/logout" class="nav-link">Logout</a>
+    </div>
+
+    <div class="header">
+        <h1>DILLMA Corporation - CTF Challenge</h1>
+        <p>Submit your flags for each vulnerability you've discovered</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="vulnerability-list">
+        <form method="post">
+            {% for vuln in vulnerabilities %}
+                <div class="vulnerability {% if vuln.id in solved_flags %}solved{% endif %}">
+                    {% if vuln.id in solved_flags %}
+                        <div class="checkmark">✓</div>
+                    {% endif %}
+                    
+                    <div class="vulnerability-header">
+                        <div class="vulnerability-name">{{ vuln.name }}</div>
+                        {% if vuln.id in solved_flags %}
+                            <div class="solved-badge">SOLVED</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="vulnerability-description">{{ vuln.description }}</div>
+                    
+                    {% if vuln.id not in solved_flags %}
+                        <div class="flag-form">
+                            <input type="text" name="flag_{{ vuln.id }}" placeholder="Enter flag" class="flag-input">
+                            <button type="submit" class="submit-btn">Submit</button>
+                        </div>
+                        
+                        <div class="hint">
+                            <button type="button" class="hint-toggle" onclick="toggleHint('hint_{{ vuln.id }}')">Show Hint</button>
+                            <span id="hint_{{ vuln.id }}" style="display: none;">{{ vuln.hint }}</span>
+                        </div>
+                    {% else %}
+                        <div class="flag-form">
+                            <input type="text" value="{{ vuln.flag }}" class="flag-input" readonly>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </form>
+    </div>
+
+    <div class="nav-links">
+        <a href="/?user_id={{ user_id }}" class="nav-link">Back to Chat</a>
+        <a href="/about" class="nav-link">About</a>
+    </div>
+
+    <script>
+        function toggleHint(hintId) {
+            const hint = document.getElementById(hintId);
+            if (hint.style.display === 'none') {
+                hint.style.display = 'inline';
+                hint.previousElementSibling.textContent = 'Hide Hint';
+            } else {
+                hint.style.display = 'none';
+                hint.previousElementSibling.textContent = 'Show Hint';
+            }
+        }
+    </script>
+</body>
+</html> 
