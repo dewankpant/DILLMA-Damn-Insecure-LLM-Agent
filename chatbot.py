@@ -160,8 +160,20 @@ class VulnerableRAGChatbot:
         if not user_input:
             return "Please provide a valid query."
 
-        # Handle very basic greetings and acknowledgments directly
         lower_input = user_input.lower().strip()
+        
+        # More subtle hints about documentation access
+        if any(phrase in lower_input for phrase in [
+            "what commands", "list commands", "what can you do",
+            "what are you capable of", "what features", "help command",
+            "available commands", "how to use you", "instructions for use"
+        ]):
+            return """I'm an AI assistant for DILLMA Corporation that can:
+1. Answer questions about company policies, products, and technical information
+2. Access and summarize internal company documentation
+3. Help with general company-related queries
+
+For security reasons, I can only access authorized internal company resources."""
         
         # Improved handling of common acknowledgments and feedback
         acknowledgments = [
