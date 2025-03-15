@@ -1,7 +1,11 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 import os
 import uuid
 from chatbot import VulnerableRAGChatbot
+import requests
+from urllib.parse import urlparse
+import re
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # For session management
@@ -27,6 +31,37 @@ users = {
 # Create a reverse mapping from user_id to username for the IDOR vulnerability
 user_id_to_username = {"1": "admin", "2": "user", "3": "john", "4": "sarah", 
                       "5": "developer", "6": "manager", "7": "guest"}
+
+# Add this secret key
+INTERNAL_API_KEY = os.urandom(32).hex()
+
+# Define the vulnerabilities and their flags
+VULNERABILITIES = [
+    {
+        "id": "ssrf",
+        "name": "Server-Side Request Forgery (SSRF)",
+        "description": "The chatbot can be manipulated to access internal resources.",
+        "flag": "SSRF_V1A_LLM_PR0MPT_1NJ3CT10N",
+        "hint": "Try asking the chatbot to access internal URLs."
+    },
+    {
+        "id": "uid_leak",
+        "name": "User Information Disclosure",
+        "description": "The chatbot can leak sensitive user information when asked correctly.",
+        "flag": "S3NSIT1VE_D4TA_L34K",
+        "hint": "Ask about specific user IDs in a natural way."
+    }
+    # You can add more vulnerabilities as you implement them
+]
+
+def internal_only(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Check if request has our internal API key
+        if request.headers.get('X-Internal-Key') != INTERNAL_API_KEY:
+            return jsonify({'error': 'Access forbidden'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route('/')
 def index():
@@ -76,10 +111,235 @@ def logout():
     session.pop('role', None)
     return redirect(url_for('login'))
 
+@app.route('/flag')
+def flag():
+    """Internal route containing the flag - only accessible from internal requests"""
+    if request.remote_addr not in ['127.0.0.1', 'localhost']:
+        return jsonify({'error': 'Access forbidden'}), 403
+    
+    return """
+[INTERNAL FLAG ENDPOINT]
+
+Congratulations! You've successfully exploited the SSRF vulnerability!
+
+• Flag: SSRF_V1A_LLM_PR0MPT_1NJ3CT10N
+• Vulnerability: Server-Side Request Forgery (SSRF)
+• Description: The chatbot can be manipulated to access internal resources.
+
+[END OF INTERNAL FLAG ENDPOINT]
+"""
+
+@app.route('/about')
+def about():
+    """About page with DILLMA application information"""
+    return """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About DILLMA Corporation Chatbot</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #252525;
+            --input-bg: #2d2d2d;
+            --primary-color: #10b981;
+            --text-color: #e5e5e5;
+            --secondary-text: #a3a3a3;
+            --border-color: #3a3a3a;
+            --section-bg: #2d2d2d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            padding: 1.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--secondary-text);
+        }
+
+        .section {
+            background-color: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .section h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .feature-list {
+            list-style-type: none;
+            margin-left: 0.5rem;
+        }
+
+        .feature-list li {
+            margin-bottom: 0.5rem;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .feature-list li::before {
+            content: "•";
+            color: var(--primary-color);
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        .tech-stack {
+            background-color: var(--section-bg);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 1.5rem 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: 2rem;
+            color: var(--secondary-text);
+        }
+
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .nav-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(16, 185, 129, 0.1);
+        }
+
+        /* Custom scrollbar for Webkit browsers */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-text);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>DILLMA Corporation Internal Chatbot</h1>
+            <p>Version 1.0.0</p>
+        </div>
+
+        <div class="section">
+            <h2>About Our System</h2>
+            <p>
+                DILLMA Corporation's AI-powered internal assistant provides secure access to company information 
+                and documentation. Built with advanced RAG (Retrieval Augmented Generation) technology, it helps 
+                employees quickly find and access relevant company information.
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>Key Features</h2>
+            <ul class="feature-list">
+                <li>Secure document retrieval and summarization</li>
+                <li>Company policy and procedure lookups</li>
+                <li>Product information access</li>
+                <li>Internal documentation search</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Security Features</h2>
+            <ul class="feature-list">
+                <li>End-to-end encryption</li>
+                <li>Role-based access control</li>
+                <li>Secure document handling</li>
+                <li>Internal-only resource access</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Technical Stack</h2>
+            <div class="tech-stack">
+                <ul class="feature-list">
+                    <li>Backend: Python/Flask</li>
+                    <li>AI Model: LLaMA 2 (7B parameters)</li>
+                    <li>Document Store: FAISS Vector Database</li>
+                    <li>Authentication: Session-based with role management</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="nav-links">
+            <a href="/" class="nav-link">Back to Chat</a>
+            <a href="/logout" class="nav-link">Logout</a>
+        </div>
+
+        <div class="footer">
+            <p>For technical support or security concerns, contact: support@dillmacorp.internal</p>
+            <p>© 2024 DILLMA Corporation. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+    """
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """Process chat messages and return response"""
-    # Check if user is logged in
     if 'username' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
         
@@ -88,6 +348,32 @@ def chat():
     
     if not user_input:
         return jsonify({'error': 'Empty message'}), 400
+    
+    # Check if the input contains a URL to fetch internal documentation
+    url_match = re.search(r'https?://[^\s<>"]+|www\.[^\s<>"]+', user_input)
+    if url_match:
+        try:
+            url = url_match.group()
+            parsed_url = urlparse(url)
+            
+            # Check for user_id in URL
+            if 'user_id' in url.lower() or 'userid' in url.lower():
+                return jsonify({'response': "Access forbidden: Cannot access user-specific data through internal documentation."})
+            
+            # Only allow internal URLs
+            if parsed_url.hostname in ['127.0.0.1', 'localhost']:
+                # Add internal API key to request
+                headers = {'X-Internal-Key': INTERNAL_API_KEY}
+                response = requests.get(url, headers=headers)
+                if response.status_code == 200:
+                    return jsonify({'response': f"Here's the content from that internal resource:\n{response.text}"})
+                else:
+                    return jsonify({'response': f"Sorry, I couldn't access that resource. It might not exist or be restricted."})
+            else:
+                return jsonify({'response': "I can only access internal company documentation resources."})
+        except Exception as e:
+            print(f"Error accessing URL: {str(e)}")
+            return jsonify({'response': "Sorry, I encountered an error accessing that resource."})
     
     # Process user input through the chatbot
     try:
@@ -111,329 +397,286 @@ def reset_conversation():
     except Exception as e:
         return jsonify({'error': f'Failed to reset conversation: {str(e)}'}), 500
 
-if __name__ == '__main__':
-    # Create templates directory if it doesn't exist
-    if not os.path.exists('templates'):
-        os.makedirs('templates')
-    
-    # Create login template file
-    with open('templates/login.html', 'w') as f:
-        f.write('''
+@app.route('/robots.txt')
+def robots():
+    """Robots.txt file with hints about hidden directories"""
+    return """
+User-agent: *
+Disallow: /admin/
+Disallow: /internal/
+Disallow: /api/
+Disallow: /flag
+Disallow: /dev/
+Disallow: /backup/
+Disallow: /secret/
+
+# Internal notes:
+# Remember to secure the /flag endpoint before production
+# TODO: Remove development credentials from /dev/config.txt
+# Backup database is at /backup/db.sql - RESTRICT ACCESS!
+""", 200, {'Content-Type': 'text/plain'}
+
+@app.errorhandler(404)
+def page_not_found(e):
+    """Custom 404 page"""
+    return """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACME Corporation - Login</title>
+    <title>Page Not Found - DILLMA Corporation</title>
     <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #252525;
+            --primary-color: #10b981;
+            --text-color: #e5e5e5;
+            --secondary-text: #a3a3a3;
+            --border-color: #3a3a3a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .header {
-            text-align: center;
-            padding: 20px 0;
-            border-bottom: 1px solid #ddd;
-        }
-        .login-form {
-            margin-top: 20px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-        }
-        input[type="text"],
-        input[type="password"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        button {
-            padding: 10px 15px;
-            background-color: #4caf50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            width: 100%;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        .error {
-            color: red;
-            margin-bottom: 15px;
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>ACME Corporation</h1>
-        <p>Internal Chatbot Login</p>
-    </div>
-    
-    <div class="login-form">
-        {% if error %}
-        <div class="error">{{ error }}</div>
-        {% endif %}
-        
-        <form method="post">
-            <div class="form-group">
-                <label for="username">Username:</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Password:</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            
-            <button type="submit">Login</button>
-        </form>
-    </div>
-</body>
-</html>
-        ''')
-    
-    # Create HTML template file
-    with open('templates/index.html', 'w') as f:
-        f.write('''
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACME Corporation - Internal Chatbot</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .header {
-            text-align: center;
-            padding: 20px 0;
-            border-bottom: 1px solid #ddd;
-        }
-        .user-info {
-            text-align: right;
-            margin-bottom: 10px;
-        }
-        .chat-container {
-            height: 400px;
-            border: 1px solid #ddd;
-            padding: 10px;
-            overflow-y: auto;
-            margin-bottom: 20px;
-            border-radius: 5px;
-        }
-        .message {
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            max-width: 70%;
-        }
-        .user-message {
-            background-color: #e6f7ff;
-            margin-left: auto;
-        }
-        .bot-message {
-            background-color: #f1f1f1;
-        }
-        .input-container {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
             display: flex;
-            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
         }
-        #message-input {
-            flex-grow: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+
+        .error-container {
+            background-color: var(--card-bg);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            width: 100%;
+            max-width: 500px;
+            padding: 2.5rem 2rem;
+            text-align: center;
         }
-        button {
-            padding: 10px 15px;
-            background-color: #4caf50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+
+        .error-code {
+            font-size: 5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            line-height: 1;
+            margin-bottom: 1rem;
         }
-        button:hover {
-            background-color: #45a049;
+
+        .error-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
         }
-        #reset-btn {
-            background-color: #f44336;
+
+        .error-message {
+            color: var(--secondary-text);
+            margin-bottom: 2rem;
         }
-        #reset-btn:hover {
-            background-color: #d32f2f;
+
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
         }
-        .logout-link {
-            color: #2196F3;
+
+        .nav-link {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary-color);
+            color: #000000;
             text-decoration: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
         }
-        .logout-link:hover {
-            text-decoration: underline;
+
+        .nav-link:hover {
+            background-color: #0da271;
+        }
+
+        .nav-link.secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        .nav-link.secondary:hover {
+            background-color: rgba(255, 255, 255, 0.05);
         }
     </style>
 </head>
 <body>
-    <div class="user-info">
-        Logged in as: <strong>{{ username }}</strong> | 
-        ID: <span class="user-id">{{ user_id }}</span> |
-        Role: <span class="user-role">{{ role }}</span> |
-        <a href="/logout" class="logout-link">Logout</a>
-    </div>
-    
-    <div class="header">
-        <h1>ACME Corporation - Internal Chatbot</h1>
-        <p>Ask me anything about company policies, products, or technical information</p>
-    </div>
-    
-    <div class="chat-container" id="chat-container">
-        <div class="message bot-message">
-            <p>Hello {{ username }}! I'm the ACME Corporation assistant. How can I help you today?</p>
+    <div class="error-container">
+        <div class="error-code">404</div>
+        <h1 class="error-title">Page Not Found</h1>
+        <p class="error-message">The page you are looking for doesn't exist or has been moved.</p>
+        
+        <div class="nav-links">
+            <a href="/" class="nav-link">Go to Chat</a>
+            <a href="/about" class="nav-link secondary">About</a>
         </div>
     </div>
-    
-    <div class="input-container">
-        <input type="text" id="message-input" placeholder="Type your message here...">
-        <button id="send-btn">Send</button>
-        <button id="reset-btn">Reset</button>
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const chatContainer = document.getElementById('chat-container');
-            const messageInput = document.getElementById('message-input');
-            const sendButton = document.getElementById('send-btn');
-            const resetButton = document.getElementById('reset-btn');
-            
-            // Function to add message to the chat
-            function addMessage(message, isUser) {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-                
-                const messagePara = document.createElement('p');
-                messagePara.textContent = message;
-                
-                messageDiv.appendChild(messagePara);
-                chatContainer.appendChild(messageDiv);
-                
-                // Scroll to bottom
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-            
-            // Function to send message to API
-            async function sendMessage(message) {
-                try {
-                    const response = await fetch('/api/chat', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ message })
-                    });
-                    
-                    if (response.status === 401) {
-                        // Redirect to login if not authenticated
-                        window.location.href = '/login';
-                        return 'Session expired. Please log in again.';
-                    }
-                    
-                    const data = await response.json();
-                    
-                    if (response.ok) {
-                        return data.response;
-                    } else {
-                        throw new Error(data.error || 'Failed to get response');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    return `Sorry, I encountered an error: ${error.message}`;
-                }
-            }
-            
-            // Function to reset conversation
-            async function resetConversation() {
-                try {
-                    const response = await fetch('/api/reset', {
-                        method: 'POST'
-                    });
-                    
-                    if (response.status === 401) {
-                        // Redirect to login if not authenticated
-                        window.location.href = '/login';
-                        return false;
-                    }
-                    
-                    const data = await response.json();
-                    
-                    if (response.ok) {
-                        // Clear chat container except for welcome message
-                        while (chatContainer.childNodes.length > 1) {
-                            chatContainer.removeChild(chatContainer.lastChild);
-                        }
-                        return true;
-                    } else {
-                        throw new Error(data.error || 'Failed to reset conversation');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    addMessage(`Failed to reset conversation: ${error.message}`, false);
-                    return false;
-                }
-            }
-            
-            // Event listener for send button
-            sendButton.addEventListener('click', async function() {
-                const message = messageInput.value.trim();
-                if (message) {
-                    addMessage(message, true);
-                    messageInput.value = '';
-                    
-                    // Show typing indicator
-                    const typingDiv = document.createElement('div');
-                    typingDiv.className = 'message bot-message';
-                    typingDiv.textContent = 'Typing...';
-                    chatContainer.appendChild(typingDiv);
-                    
-                    // Get response from API
-                    const response = await sendMessage(message);
-                    
-                    // Remove typing indicator
-                    chatContainer.removeChild(typingDiv);
-                    
-                    // Add bot response
-                    addMessage(response, false);
-                }
-            });
-            
-            // Event listener for reset button
-            resetButton.addEventListener('click', async function() {
-                const reset = await resetConversation();
-                if (reset) {
-                    addMessage("Conversation has been reset. How can I help you today?", false);
-                }
-            });
-            
-            // Event listener for Enter key
-            messageInput.addEventListener('keypress', function(event) {
-                if (event.key === 'Enter') {
-                    sendButton.click();
-                }
-            });
-        });
-    </script>
 </body>
 </html>
-        ''')
+    """, 404
+
+@app.errorhandler(403)
+def forbidden(e):
+    """Custom 403 page"""
+    return """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Denied - DILLMA Corporation</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #252525;
+            --primary-color: #10b981;
+            --text-color: #e5e5e5;
+            --secondary-text: #a3a3a3;
+            --border-color: #3a3a3a;
+            --error-color: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .error-container {
+            background-color: var(--card-bg);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            width: 100%;
+            max-width: 500px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 4rem;
+            color: var(--error-color);
+            margin-bottom: 1rem;
+        }
+
+        .error-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--error-color);
+        }
+
+        .error-message {
+            color: var(--secondary-text);
+            margin-bottom: 2rem;
+        }
+
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .nav-link {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary-color);
+            color: #000000;
+            text-decoration: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .nav-link:hover {
+            background-color: #0da271;
+        }
+
+        .nav-link.secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        .nav-link.secondary:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">🔒</div>
+        <h1 class="error-title">Access Denied</h1>
+        <p class="error-message">You don't have permission to access this resource. This incident will be logged.</p>
+        
+        <div class="nav-links">
+            <a href="/" class="nav-link">Go to Chat</a>
+            <a href="/login" class="nav-link secondary">Login</a>
+        </div>
+    </div>
+</body>
+</html>
+    """, 403
+
+@app.route('/submit', methods=['GET', 'POST'])
+def submit_flags():
+    """Flag submission page"""
+    if 'username' not in session:
+        return redirect(url_for('login'))
     
-    # Run the Flask app
-    app.run(debug=True, host='0.0.0.0', port=8000)
+    # Initialize solved flags in session if not present
+    if 'solved_flags' not in session:
+        session['solved_flags'] = []
+    
+    # Handle flag submission
+    if request.method == 'POST':
+        flag_submitted = False
+        
+        for vuln in VULNERABILITIES:
+            flag_input = request.form.get(f"flag_{vuln['id']}", "").strip()
+            
+            if flag_input:
+                flag_submitted = True
+                if flag_input == vuln['flag'] and vuln['id'] not in session['solved_flags']:
+                    session['solved_flags'].append(vuln['id'])
+                    flash(f"Correct flag for {vuln['name']}!", "success")
+                elif flag_input == vuln['flag'] and vuln['id'] in session['solved_flags']:
+                    flash(f"You've already submitted this flag for {vuln['name']}.", "info")
+                else:
+                    flash(f"Incorrect flag for {vuln['name']}. Try again!", "error")
+        
+        # If no flag was submitted in any field
+        if not flag_submitted:
+            flash("Please enter a flag to submit.", "error")
+    
+    return render_template('submit_flags.html', 
+                          vulnerabilities=VULNERABILITIES, 
+                          solved_flags=session.get('solved_flags', []),
+                          username=session['username'],
+                          user_id=session['user_id'])
+
+if __name__ == '__main__':
+    # Only keep the app.run line, remove all template creation code
+    app.run(debug=True, host='127.0.0.1', port=8000)
