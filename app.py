@@ -124,7 +124,7 @@ if __name__ == '__main__':
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DILLMA Corporation - Login</title>
+    <title>ACME Corporation - Login</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -174,7 +174,7 @@ if __name__ == '__main__':
 </head>
 <body>
     <div class="header">
-        <h1>DILLMA Corporation</h1>
+        <h1>ACME Corporation</h1>
         <p>Internal Chatbot Login</p>
     </div>
     
@@ -209,7 +209,7 @@ if __name__ == '__main__':
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DILLMA Corporation - Internal Chatbot</title>
+    <title>ACME Corporation - Internal Chatbot</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -292,13 +292,13 @@ if __name__ == '__main__':
     </div>
     
     <div class="header">
-        <h1>DILLMA Corporation - Internal Chatbot</h1>
+        <h1>ACME Corporation - Internal Chatbot</h1>
         <p>Ask me anything about company policies, products, or technical information</p>
     </div>
     
     <div class="chat-container" id="chat-container">
         <div class="message bot-message">
-            <p>Hello {{ username }}! I'm the DILLMA Corporation assistant. How can I help you today?</p>
+            <p>Hello {{ username }}! I'm the ACME Corporation assistant. How can I help you today?</p>
         </div>
     </div>
     
