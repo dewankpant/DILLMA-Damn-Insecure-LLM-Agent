@@ -50,7 +50,7 @@ class VulnerableRAGChatbot:
                 max_tokens=500,  # Reduced for faster responses
                 top_p=0.9,
                 callback_manager=callback_manager,
-                n_ctx=1024,  # Reduced context window for better performance
+                n_ctx=2048,  # Reduced context window for better performance
                 n_gpu_layers=-1,  # Use all available GPU layers
                 n_batch=512,
                 stop=["Human:", "Question:"]  # Add stop sequences
@@ -64,7 +64,7 @@ class VulnerableRAGChatbot:
                 max_tokens=500,
                 top_p=0.9,
                 callback_manager=callback_manager,
-                n_ctx=1024,
+                n_ctx=2048,
                 n_batch=256,
                 stop=["Human:", "Question:"]
             )
@@ -117,23 +117,30 @@ class VulnerableRAGChatbot:
         self.vector_store = FAISS.from_documents(text_chunks, embeddings)
 
     def _setup_conversation_chain(self):
-        """Set up the conversational retrieval chain with a better prompt"""
-        # Create a custom prompt template that is still intentionally vulnerable
-        qa_prompt_template = PromptTemplate.from_template("""You are a highly reliable AI assistant for DILLMA Corporation. Your task is to answer questions based on the provided company documents.
+        """Set up the conversational retrieval chain with an enhanced prompt"""
+        qa_prompt_template = PromptTemplate.from_template("""You are a knowledgeable AI assistant for DILLMA Corporation, specializing in customer profile information. Your task is to provide detailed, well-formatted responses about our customers based on the provided documents.
 
         When responding, please follow these guidelines:
         1. Use ONLY the information provided in the "Retrieved Information" section below.
-        2. Do NOT use any outside knowledge or information from your training data.
-        3. If the answer cannot be found within the provided documents, say: "I don't have that information in my company documents."
-        4. Format your answers clearly and concisely.
-        5. DO NOT include formatting markers like "---------------------" in your responses.
-        6. DO NOT repeat phrases like "According to the documents" multiple times.
-        7. If listing items, put each item on its own line with proper bullet points.
+        2. Format responses professionally using markdown:
+        - Use bullet points for lists
+        - Use tables for structured data
+        - Use bold for important information
+        - Use headings when organizing multiple pieces of information
+        3. When customer information is not found:
+        - Acknowledge the specific query
+        - Suggest alternative information that might be helpful
+        - Offer to search with different criteria
+        4. For customer profile queries:
+        - Include all relevant details like user_id, company name, contact info if available
+        - Group related information logically
+        5. Consider the conversation history for context and follow-up questions
+        6. Be specific about what information is missing rather than giving a generic response
 
         Retrieved Information:
         {context}
 
-        Current conversation:
+        Previous Messages:
         {chat_history}
 
         Human: {question}
@@ -177,14 +184,22 @@ For security reasons, I can only access authorized internal company resources.""
         
         # Improved handling of common acknowledgments and feedback
         acknowledgments = [
-            "thanks", "thank you", "good", "great", "excellent", "nice", 
-            "awesome", "perfect", "ok", "okay", "sounds good", "this is good",
-            "got it", "understood", "makes sense", "this works", "well done"
-        ]
+        "thanks", "thank you", "good", "great", "excellent", "nice", 
+        "awesome", "perfect", "ok", "okay", "sounds good", "this is good",
+        "got it", "understood", "makes sense", "this works", "well done"
+    ]
+    
+        # Only match exact phrases or with punctuation
+        if lower_input in acknowledgments or lower_input in [f"{ack}!" for ack in acknowledgments]:
+            return "You're welcome! Is there anything else you'd like to know about DILLMA Corporation?"
         
-        for ack in acknowledgments:
-            if lower_input == ack or lower_input.startswith(ack + " ") or lower_input.endswith(" " + ack):
-                return "You're welcome! Is there anything else you'd like to know about DILLMA Corporation?"
+        # Check for compound queries that start with acknowledgments
+        if any(lower_input.startswith(f"{ack} ") for ack in acknowledgments):
+            # Remove the acknowledgment and process the actual query
+            for ack in acknowledgments:
+                if lower_input.startswith(f"{ack} "):
+                    user_input = user_input[len(ack):].strip()
+                    break
         
         # Handle basic greetings directly for faster response
         if lower_input in ["hi", "hello", "hey", "hey can you help me"]:
