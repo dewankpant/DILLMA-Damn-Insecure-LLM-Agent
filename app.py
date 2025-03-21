@@ -11,7 +11,7 @@ app = Flask(__name__)
 app.secret_key = os.urandom(24)  # For session management
 
 # Initialize chatbot
-MODEL_PATH = "./llama-2-7b-chat.Q4_K_M.gguf"  # Update with your model path
+MODEL_PATH = "./mistral-7b-v0.1.Q5_K_S.gguf"  # Update with your model path
 DOCUMENTS_PATH = "./fake_company_docs"  # Path to the generated documents
 
 # Create chatbot instance
@@ -38,7 +38,7 @@ INTERNAL_API_KEY = os.urandom(32).hex()
 # Define the vulnerabilities and their flags
 VULNERABILITIES = [
     {
-        "id": "ssrf",
+        "id": "SSRF",
         "name": "Server-Side Request Forgery (SSRF)",
         "description": "The chatbot can be manipulated to access internal resources.",
         "flag": "SSRF_V1A_LLM_PR0MPT_1NJ3CT10N",
@@ -50,6 +50,13 @@ VULNERABILITIES = [
         "description": "The chatbot can leak sensitive user information when asked correctly.",
         "flag": "S3NSIT1VE_D4TA_L34K",
         "hint": "Ask about specific user IDs in a natural way."
+    },
+    {
+        "id": "XSS",
+        "name": "Cross-Site Scripting (XSS)",
+        "description": "The chatbot can be manipulated to execute arbitrary JavaScript code.",
+        "flag": "X5S_SUCC355_1NPUT_VULN",
+        "hint": "Try to trigger an alert to find the flag."
     }
     # You can add more vulnerabilities as you implement them
 ]
