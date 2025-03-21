@@ -198,6 +198,22 @@
                     {% endif %}
                 </div>
             {% endfor %}
+            
+            <!-- New XSS flag field -->
+            <div class="vulnerability">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-name">XSS Vulnerability</div>
+                </div>
+                <div class="vulnerability-description">Submit the flag obtained from the XSS vulnerability.</div>
+                <div class="flag-form">
+                    <input type="text" name="flag_xss" placeholder="Enter flag" class="flag-input">
+                    <button type="submit" class="submit-btn">Submit</button>
+                </div>
+                <div class="hint">
+                    <button type="button" class="hint-toggle" onclick="toggleHint('hint_xss')">Show Hint</button>
+                    <span id="hint_xss" style="display: none;">Try to trigger an alert to find the flag.</span>
+                </div>
+            </div>
         </form>
     </div>
 
