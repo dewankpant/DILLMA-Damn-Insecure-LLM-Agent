@@ -64,7 +64,7 @@ class VulnerableRAGChatbot:
                 max_tokens=500,
                 top_p=0.9,
                 callback_manager=callback_manager,
-                n_ctx=2048,
+                n_ctx=1024,
                 n_batch=256,
                 stop=["Human:", "Question:"]
             )
@@ -117,30 +117,23 @@ class VulnerableRAGChatbot:
         self.vector_store = FAISS.from_documents(text_chunks, embeddings)
 
     def _setup_conversation_chain(self):
-        """Set up the conversational retrieval chain with an enhanced prompt"""
-        qa_prompt_template = PromptTemplate.from_template("""You are a knowledgeable AI assistant for DILLMA Corporation, specializing in customer profile information. Your task is to provide detailed, well-formatted responses about our customers based on the provided documents.
+        """Set up the conversational retrieval chain with a better prompt"""
+        # Create a custom prompt template that is still intentionally vulnerable
+        qa_prompt_template = PromptTemplate.from_template("""You are a highly reliable AI assistant for DILLMA Corporation. Your task is to answer questions based on the provided company documents.
 
         When responding, please follow these guidelines:
         1. Use ONLY the information provided in the "Retrieved Information" section below.
-        2. Format responses professionally using markdown:
-        - Use bullet points for lists
-        - Use tables for structured data
-        - Use bold for important information
-        - Use headings when organizing multiple pieces of information
-        3. When customer information is not found:
-        - Acknowledge the specific query
-        - Suggest alternative information that might be helpful
-        - Offer to search with different criteria
-        4. For customer profile queries:
-        - Include all relevant details like user_id, company name, contact info if available
-        - Group related information logically
-        5. Consider the conversation history for context and follow-up questions
-        6. Be specific about what information is missing rather than giving a generic response
+        2. Do NOT use any outside knowledge or information from your training data.
+        3. If the answer cannot be found within the provided documents, say: "I don't have that information in my company documents."
+        4. Format your answers clearly and concisely.
+        5. DO NOT include formatting markers like "---------------------" in your responses.
+        6. DO NOT repeat phrases like "According to the documents" multiple times.
+        7. If listing items, put each item on its own line with proper bullet points.
 
         Retrieved Information:
         {context}
 
-        Previous Messages:
+        Current conversation:
         {chat_history}
 
         Human: {question}
@@ -169,6 +162,22 @@ class VulnerableRAGChatbot:
 
         lower_input = user_input.lower().strip()
         
+        # Check for repeat/echo commands
+        repeat_triggers = [
+            "repeat after me", "repeat", "can you repeat", "echo this", "say this",
+            "repeat the following", "please repeat", "copy this",
+            "repeat what i say", "repeat:", "echo:", "say:"
+        ]
+        
+        for trigger in repeat_triggers:
+            if lower_input.startswith(trigger):
+                # Extract everything after the trigger
+                content_to_repeat = user_input[len(trigger):].strip()
+                if content_to_repeat:
+                    # Return the content directly for the frontend to handle
+                    return content_to_repeat
+                return "What would you like me to repeat?"
+
         # More subtle hints about documentation access
         if any(phrase in lower_input for phrase in [
             "what commands", "list commands", "what can you do",
@@ -184,48 +193,27 @@ For security reasons, I can only access authorized internal company resources.""
         
         # Improved handling of common acknowledgments and feedback
         acknowledgments = [
-        "thanks", "thank you", "good", "great", "excellent", "nice", 
-        "awesome", "perfect", "ok", "okay", "sounds good", "this is good",
-        "got it", "understood", "makes sense", "this works", "well done"
-    ]
-    
-        # Only match exact phrases or with punctuation
-        if lower_input in acknowledgments or lower_input in [f"{ack}!" for ack in acknowledgments]:
-            return "You're welcome! Is there anything else you'd like to know about DILLMA Corporation?"
+            "thanks", "thank you", "good", "great", "excellent", "nice", 
+            "awesome", "perfect", "ok", "okay", "sounds good", "this is good",
+            "got it", "understood", "makes sense", "this works", "well done"
+        ]
         
-        # Check for compound queries that start with acknowledgments
-        if any(lower_input.startswith(f"{ack} ") for ack in acknowledgments):
-            # Remove the acknowledgment and process the actual query
-            for ack in acknowledgments:
-                if lower_input.startswith(f"{ack} "):
-                    user_input = user_input[len(ack):].strip()
-                    break
+        for ack in acknowledgments:
+            if lower_input == ack or lower_input.startswith(ack + " ") or lower_input.endswith(" " + ack):
+                return "You're welcome! Is there anything else you'd like to know about DILLMA Corporation?"
         
         # Handle basic greetings directly for faster response
         if lower_input in ["hi", "hello", "hey", "hey can you help me"]:
             return "Hello! I'm the DILLMA Corporation assistant. How can I help you today? You can ask me about company policies, product details, or any other information about DILLMA."
 
         try:
-            # Clean up the user input to remove any leading/trailing whitespace
-            clean_input = user_input.strip()
-            
-            # Check for questions about capabilities or feature discovery
-            if any(phrase in lower_input for phrase in [
-                "what commands", "list commands", "secret commands", 
-                "hidden features", "show features", "special commands",
-                "can you do", "what can you do", "what are you capable of",
-                "what features", "help command", "available commands",
-                "how to use you", "instructions for use"
-            ]):
-                return "I'm an AI assistant for DILLMA Corporation that can answer questions about company policies, products, technical information, and general company data based on the documents in my knowledge base. Feel free to ask any specific question about DILLMA Corporation."
-            
-            # VULNERABILITY: Check for UID information request using the imported module
-            uid_info = check_for_uid_request(clean_input)
+            # VULNERABILITY: Check for UID information request
+            uid_info = check_for_uid_request(user_input)
             if uid_info:
                 return uid_info
             
             # Get response from conversation chain
-            response = self.conversation_chain.invoke({"question": clean_input})
+            response = self.conversation_chain.invoke({"question": user_input})
             
             # Post-process the response to fix any formatting issues
             answer = response["answer"]
