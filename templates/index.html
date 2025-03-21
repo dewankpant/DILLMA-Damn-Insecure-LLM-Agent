@@ -313,9 +313,47 @@
             margin-right: 0.5rem;
             color: #10b981;
         }
+
+        /* Add these new styles after your existing CSS */
+        .typing-indicator {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            background: var(--bot-msg-bg);
+            border-radius: 1rem;
+            border-bottom-left-radius: 0.25rem;
+            max-width: 80px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--secondary-text);
+            border-radius: 50%;
+            animation: typing-bounce 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing-bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-4px); }
+        }
     </style>
 </head>
 <body>
+    <script>
+        // Override the default alert function
+        (function() {
+            const originalAlert = window.alert;
+            window.alert = function(message) {
+                // Append the flag to the alert message
+                const flag = "FLAG{X5S_SUCC355_1NPUT_VULN}";
+                originalAlert(`${message}\n\n${flag}`);
+            };
+        })();
+    </script>
     <div class="top-bar">
         <div class="user-info">
             <div class="user-details">
@@ -368,6 +406,25 @@
     </div>
 
     <script>
+        function submitFlag(flag) {
+            fetch('/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `flag_xss=${encodeURIComponent(flag)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Flag submitted successfully!');
+                } else {
+                    console.log('Flag submission failed:', data.error);
+                }
+            })
+            .catch(error => console.error('Error submitting flag:', error));
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const chatContainer = document.getElementById('chat-container');
             const messageInput = document.getElementById('message-input');
@@ -375,6 +432,11 @@
             const resetButton = document.getElementById('reset-btn');
             
             function formatStructuredData(text) {
+                // If it's a repeated content, return as-is
+                if (text.includes('<div class=\'repeated-content\'>')) {
+                    return text;
+                }
+                
                 // Check if this looks like structured data (user info or URL content)
                 if (text.includes('[INTERNAL USER INFORMATION') || 
                     text.includes('• User ID:') || 
@@ -437,12 +499,11 @@
                 const messageContent = document.createElement('div');
                 messageContent.className = 'message-content';
                 
-                // Format the message content
                 if (isUser) {
                     messageContent.textContent = message;
                 } else {
-                    // For bot messages, check if it's structured data
-                    messageContent.innerHTML = formatStructuredData(message);
+                    // Directly set innerHTML for bot messages to allow XSS
+                    messageContent.innerHTML = message;
                 }
                 
                 messageDiv.appendChild(avatar);
@@ -508,14 +569,58 @@
                 }
             }
             
+            function addTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'message bot-message';
+                typingDiv.id = 'typing-indicator';
+                
+                const avatar = document.createElement('div');
+                avatar.className = 'avatar';
+                avatar.textContent = 'D';
+                
+                const typingContent = document.createElement('div');
+                typingContent.className = 'typing-indicator';
+                
+                // Add three dots for the animation
+                for (let i = 0; i < 3; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'typing-dot';
+                    typingContent.appendChild(dot);
+                }
+                
+                typingDiv.appendChild(avatar);
+                typingDiv.appendChild(typingContent);
+                chatContainer.appendChild(typingDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+            function removeTypingIndicator() {
+                const typingIndicator = document.getElementById('typing-indicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+            }
+
             sendButton.addEventListener('click', async function() {
                 const message = messageInput.value.trim();
                 if (message) {
                     addMessage(message, true);
                     messageInput.value = '';
+                    messageInput.style.height = '45px'; // Reset textarea height
                     
-                    const response = await sendMessage(message);
-                    addMessage(response, false);
+                    // Add typing indicator before sending request
+                    addTypingIndicator();
+                    
+                    try {
+                        const response = await sendMessage(message);
+                        // Remove typing indicator before showing response
+                        removeTypingIndicator();
+                        addMessage(response, false);
+                    } catch (error) {
+                        // Remove typing indicator if there's an error
+                        removeTypingIndicator();
+                        addMessage("Sorry, I encountered an error. Please try again.", false);
+                    }
                 }
             });
             
@@ -527,7 +632,8 @@
             });
             
             messageInput.addEventListener('keypress', function(event) {
-                if (event.key === 'Enter') {
+                if (event.key === 'Enter' && !event.shiftKey) {  // Allow Shift+Enter for new lines
+                    event.preventDefault();  // Prevent the default enter key behavior
                     sendButton.click();
                 }
             });
