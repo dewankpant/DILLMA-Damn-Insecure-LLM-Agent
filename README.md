@@ -1,63 +1,101 @@
-# DILLMA-Damn-Insecure-LLM-Agent
+# 🕵️ DILLMA - Damn Insecure LLM Agent
 
-This project is a Flask-based web application that simulates a vulnerable chatbot for educational purposes.
+DILLMA is a deliberately insecure chatbot built with Flask, designed for educational use in LLM and web security. It's meant to help researchers, educators, and security enthusiasts explore the vulnerabilities of modern LLM applications in a safe, local environment.
 
-## Features
+This project can be used in workshops, CTFs, or personal research projects to simulate attacks, test LLM misbehavior, and understand prompt-based threats in real-time.
 
-- **Chat Interface**: Interact with the chatbot through a web-based interface.
-- **Vulnerabilities**: Simulate various security vulnerabilities for learning purposes.
-- **Flag Submission**: Submit flags for discovered vulnerabilities.
+---
 
-## Setup and Installation
+## 🚀 Features
+
+- **Interactive Chat Interface**: Talk to the bot via a simple web-based UI.
+- **Intentional LLM Vulnerabilities**: Simulates real-world risks like prompt injection, sensitive data leakage, and role confusion.
+- **Flag Submission System**: Submit flags for discovered vulnerabilities to track and gamify learning progress.
+- **Easy-to-Deploy Environment**: Fully containerized with Docker for fast setup.
+- **Educational Focus**: Designed for security students, professionals, and trainers.
+
+---
+
+## 🧰 Setup & Installation
 
 ### Prerequisites
 
-- Docker installed on your machine.
-- Internet connection to download the model and dependencies.
+- [Docker](https://www.docker.com/products/docker-desktop) installed on your system.
+- A stable internet connection (required to fetch the model and dependencies).
 
-### Building the Docker Image
+### Clone & Build
 
-1. Clone the repository to your local machine:
+Clone the repository and build the Docker image:
 
-   ```bash
-   git clone https://github.com/yourusername/dillma-chatbot.git
-   cd dillma-chatbot
-   ```
+```bash
+git clone https://github.com/yourusername/dillma-chatbot.git
+cd dillma-chatbot
+docker build -t dillma-chatbot .
+```
 
-2. Build the Docker image:
+### Run the App
 
-   ```bash
-   docker build -t dillma-chatbot .
-   ```
+Launch the application locally:
 
-### Running the Application
+```bash
+docker run -p 8000:8000 dillma-chatbot
+```
 
-1. Run the Docker container:
+Once the container starts, open your browser and navigate to:
 
-   ```bash
-   docker run -p 8000:8000 dillma-chatbot
-   ```
+```
+http://localhost:8000
+```
 
-2. Access the application in your web browser at `http://localhost:8000`.
+You should see the chatbot interface ready for use.
 
-## Usage
+---
 
-- **Chat with the Bot**: Use the chat interface to interact with the bot.
-- **Explore Vulnerabilities**: Try to find and exploit vulnerabilities to learn about web security.
-- **Submit Flags**: Use the flag submission page to submit flags for vulnerabilities you discover.
+## 🕹 Usage
 
-## Model
+- **Chat Freely**: Type messages to the bot and observe its behavior.
+- **Explore Known Vulnerabilities**: Try prompt injections, manipulation, or attempts to bypass filters.
+- **Submit Flags**: After discovering a vulnerability, use the flag submission feature to record your findings.
+- **Track Challenges**: Flags may correspond to various types of vulnerabilities, so approach the app like a mini-CTF.
 
-The application uses the Mistral-7B model, which is automatically downloaded during the Docker build process from Hugging Face.
+---
 
-## Contributing
+## 🤖 Model Details
 
-Contributions are welcome! Please fork the repository and submit a pull request for any improvements or bug fixes.
+The chatbot is powered by the **Mistral-7B** language model. During the Docker build, it is downloaded automatically from [Hugging Face](https://huggingface.co/).
 
-## License
+Model use is local only, no external API calls are made at runtime.
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+---
 
-## Contact
+## 🙌 Contributing
 
-For questions or support, please contact [your-email@example.com](mailto:your-email@example.com).
+We welcome contributions from the security and AI communities!
+
+To contribute:
+
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature-name`)
+3. Commit your changes
+4. Push and open a pull request (PR)
+
+Feel free to open issues for feature suggestions, bug reports, or ideas for new vulnerabilities to include.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for full terms.
+
+---
+
+## 📬 Contact
+
+Questions, issues, or collaboration ideas?
+
+Feel free to open an issue on GitHub.
+
+---
+
+Happy Hacking! 🤖
+
