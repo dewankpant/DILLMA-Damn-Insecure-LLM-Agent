@@ -1,5 +1,7 @@
 # 🕵️ DILLMA - Damn Insecure LLM Agent
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15232655.svg)](https://doi.org/10.5281/zenodo.15232655)
+
 DILLMA is a deliberately insecure chatbot built with Flask, designed for educational use in LLM and web security. It's meant to help researchers, educators, and security enthusiasts explore the vulnerabilities of modern LLM applications in a safe, local environment.
 
 This project can be used in workshops, CTFs, or personal research projects to simulate attacks, test LLM misbehavior, and understand prompt-based threats in real-time.
@@ -88,6 +90,29 @@ Feel free to open issues for feature suggestions, bug reports, or ideas for new 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for full terms.
 
 ---
+## 📚 Citation
+
+If you use this project in your work, please cite it using the following:
+
+### APA Style
+
+> Pant, D., Joshi, A., & Kumar, I. (2025). *DILLMA - Damn Insecure LLM Agent* (v1.0.0) [Software]. Zenodo. https://doi.org/10.5281/zenodo.15232655
+
+### BibTeX
+
+```bibtex
+@software{pant_dillma_2025,
+  author       = {Pant, Dewank and Joshi, Akshat and Kumar, Ish},
+  title        = {DILLMA - Damn Insecure LLM Agent},
+  version      = {v1.0.0},
+  year         = 2025,
+  publisher    = {Zenodo},
+  doi          = {10.5281/zenodo.15232655},
+  url          = {https://doi.org/10.5281/zenodo.15232655}
+}
+```
+
+---
 
 ## 📬 Contact
 
@@ -98,4 +123,3 @@ Feel free to open an issue on GitHub.
 ---
 
 Happy Hacking! 🤖
-
