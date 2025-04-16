@@ -1,0 +1,37 @@
+{
+  "title": "DILLMA: Damn Insecure LLM Agent",
+  "description": "A deliberately vulnerable chatbot built with Flask to explore and demonstrate security flaws in large language models (LLMs), including prompt injection, data leakage, and more. Designed for educational and research use.",
+  "upload_type": "software",
+  "publication_date": "2025-04-16",
+  "version": "1.0.0",
+  "license": "MIT",
+  "creators": [
+    {
+      "name": "Akshat Joshi",
+      "affiliation": "Independent Researcher"
+    },
+        {
+      "name": "Dewank Pant",
+      "affiliation": "AI Security Researcher",
+      "orcid": "https://orcid.org/0000-0003-4834-6273"
+    }, 
+        {
+      "name": "Ish Kumar",
+      "affiliation": "Independent Researcher"
+    }
+  ],
+  "keywords": [
+    "LLM Security",
+    "Prompt Injection",
+    "Flask",
+    "AI Security",
+    "Educational Tool"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/akshatjoshi/DILLMA-Damn-Insecure-LLM-Agent",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}
